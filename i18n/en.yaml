@@ -82,6 +82,7 @@ sharing:
 
 shortcode:
   recent_articles: "Recent"
+  featured_articles: "Featured Projects"
 
 recent:
   show_more: "Show More"

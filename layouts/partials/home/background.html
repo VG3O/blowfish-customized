@@ -101,6 +101,7 @@
 </article>
 <section>
   {{ partial "recent-articles/main.html" . }}
+  {{ partial "featured-articles/main.html" . }}
 </section>
 {{ if .Site.Params.homepage.layoutBackgroundBlur | default false }}
   <div
