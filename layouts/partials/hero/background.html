@@ -1,8 +1,12 @@
 {{ $disableImageOptimization := site.Store.Get "disableImageOptimization" }}
 
 {{ $useDefault := false }}
+{{ $useDefaultVideo := false }}
 {{ $featured := "" }}
 {{ $featuredURL := "" }}
+{{ $featuredVideo := "" }}
+{{ $featuredVideoURL := "" }}
+
 {{ with .Params.featureimage }}
   {{ if or (strings.HasPrefix . "http:") (strings.HasPrefix . "https:") }}
     {{ if site.Params.hotlinkFeatureImage }}
@@ -22,8 +26,16 @@
   {{ end }}
 {{ end }}
 
+
+{{ if not (or $featuredVideo $featuredVideo )}}
+  {{ $videos := .Resources.ByType "video" }}
+  {{ range slice "*background*" "*feature*" "*cover*" "*thumbnail*" }}
+    {{ if not $featuredVideo }}{{ $featuredVideo = $videos.GetMatch . }}{{ end }}
+  {{ end }}
+{{ end }}
+
 {{ if not (or $featured $featuredURL) }}
-  {{ $default := site.Store.Get "defaultBackgroundImage" }}
+ {{ $default := site.Store.Get "defaultBackgroundImage" }}
   {{ if $default.url }}
     {{ $featuredURL = $default.url }}
     {{ $useDefault = true }}
@@ -33,14 +45,29 @@
   {{ end }}
 {{ end }}
 
-{{/* generate image URL if not hotlink */}}
-{{ if not $featuredURL }}
+{{ if not (or $featuredVideo $featuredVideoURL) }}
+  {{ $default := site.Store.Get "defaultBackgroundVideo" }}
+  {{ if $default.url }}
+    {{ $featuredVideoURL = $default.url }}
+    {{ $useDefaultVideo = true }}
+  {{ else if $default.obj }}
+    {{ $featuredVideo = $default.obj }}
+    {{ $useDefaultVideo = true }}
+  {{ end }}
+{{ end }}
+
+{{/* generate image and video URL if not hotlink */}}
+{{ if and (not $featuredURL) (not $featuredVideo) (not $useDefaultVideo) }}
   {{ with $featured }}
     {{ $featuredURL = .RelPermalink }}
     {{ if not (or $disableImageOptimization (eq .MediaType.SubType "svg")) }}
       {{ $size := site.Store.Get "backgroundImageWidth" }}
       {{ $featuredURL = (.Resize $size).RelPermalink }}
     {{ end }}
+  {{ end }}
+{{ else if and (not $featuredVideoURL) }}
+  {{ with $featuredVideo }}
+      {{ $featuredVideoURL = .RelPermalink }}
   {{ end }}
 {{ end }}
 
@@ -56,7 +83,7 @@
   )
 }}
 
-{{- with $featuredURL -}}
+{{- with (or $featuredURL $featuredVideoURL) -}}
   {{ if $shouldAddHeaderSpace | default true }}
     <div id="hero" class="h-[150px] md:h-[200px]"></div>
   {{ end }}
@@ -66,15 +93,31 @@
     {{ with $.Params.imagePosition | default $defaultPosition }}
       {{ $style = printf "object-position: %s;" . }}
     {{ end }}
-    <img
-      id="background-image"
-      src="{{ . }}"
-      role="presentation"
-      loading="eager"
-      decoding="async"
-      fetchpriority="high"
-      class="absolute inset-0 w-full h-full object-cover"
-      {{ if $style }}style="{{ $style | safeCSS }}"{{ end }}>
+
+    {{ if $featuredVideoURL }}    
+      <video
+              id="background-video"
+              class="absolute inset-0 w-full h-full object-cover"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="auto"
+            > 
+              <source src="{{ . }}" type="video/mp4" />
+      </video>
+    {{ else if $featuredURL }}
+      <img
+        id="background-image"
+        src="{{ . }}"
+        role="presentation"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+        class="absolute inset-0 w-full h-full object-cover"
+        {{ if $style }}style="{{ $style | safeCSS }}"{{ end }}>
+    {{ end }}
+    
     <div
       class="absolute inset-0 bg-gradient-to-t from-neutral dark:from-neutral-800 to-transparent mix-blend-normal"></div>
     <div
